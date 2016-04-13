@@ -1,0 +1,7 @@
+snowplow:
+    collector: 
+    app_id:
+s3:
+    buckets:
+        -
+        -

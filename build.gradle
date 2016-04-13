@@ -1,0 +1,93 @@
+group 'com.snowplowanalytics'
+version '0.1.0-rc1'
+
+apply plugin: 'java'
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.6'
+    }
+}
+apply plugin: 'com.jfrog.bintray'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "http://maven.snplow.com/releases"
+    }
+}
+
+dependencies {
+    compile 'com.amazonaws:aws-java-sdk:1.11.0'
+    compile 'com.amazonaws:aws-lambda-java-core:1.1.0'
+    compile 'com.amazonaws:aws-lambda-java-events:1.1.0'
+    compile 'com.amazonaws:aws-java-sdk-s3:1.10.69'
+    compile 'com.amazonaws:aws-java-sdk-lambda:1.10.69'
+    compile 'com.squareup.okhttp3:okhttp:3.2.0'
+    compile 'com.snowplowanalytics:snowplow-java-tracker:0.8.0'
+    compile 'com.google.code.gson:gson:2.7'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.mockito:mockito-core:1.+'
+}
+
+task buildZip(type: Zip, dependsOn: clean) {
+    from compileJava
+    from processResources
+    into('lib') {
+        from configurations.runtime
+    }
+}
+
+task buildDeployZip(type: Zip) {
+    from buildZip.outputs.files
+    from files('deploy/deploy.py', 'deploy/config.yaml', 'deploy/lambda_trust_policy.json', 'deploy/perms.json', 'deploy/README.txt')
+    classifier = 'bundle'
+}
+
+def conf(String name) {
+    if (!System.getenv(name)) {
+        if (project.hasProperty(name))
+        {
+            project.property(name)
+        } else {
+            ""
+        }
+    } else {
+        System.getenv(name)
+    }
+}
+
+bintray {    
+    user = conf('BINTRAY_USER') // environment variable or project setting
+    key  = conf('BINTRAY_KEY')
+
+    publish = true
+    pkg {
+        repo = 'snowplow-generic'
+        name = 'snowplow-aws-lambda-source'
+        desc = 'AWS Lambda Function for sending AWS event sources as Snowplow events'
+        userOrg = 'snowplow'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/snowplow/snowplow-aws-lambda-source'
+        websiteUrl = 'https://github.com/snowplow/snowplow-aws-lambda-source'
+        issueTrackerUrl = 'https://github.com/snowplow/snowplow-aws-lambda-source/issues'
+    }
+
+    filesSpec {
+        from buildDeployZip.outputs.files
+        from buildZip.outputs.files
+        include '*.zip'
+        into '.'
+        rename { filename -> filename.replace(/-/, '_') }
+    }
+}
+
+task printVersion { 
+    doLast {
+        print "$project.version"
+    }
+}

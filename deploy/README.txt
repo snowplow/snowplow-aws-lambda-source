@@ -1,0 +1,1 @@
+For a complete set-up guide - see here https://github.com/snowplow/snowplow/wiki/AWS-Lambda-source-setup
